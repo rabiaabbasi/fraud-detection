@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
+os.makedirs('plots', exist_ok=True)
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
@@ -11,11 +13,8 @@ from sklearn.metrics import classification_report, confusion_matrix
 
 from imblearn.over_sampling import SMOTE
 
+
 class FraudDetector:
-    """
-    A reusable class to detect fraud in financial transaction data.
-    Covers loading, preprocessing, training, and evaluation.
-    """
 
     def __init__(self, filepath):
         self.filepath = filepath
@@ -30,20 +29,20 @@ class FraudDetector:
         """Load the CSV dataset and show basic info."""
         self.df = pd.read_csv(self.filepath)
         print("Data loaded successfully!")
-        print("Shape: ", self.df.shape)
-        print("\nFirst 5 rows:\n", self.df.head())
-        print("\nColumn names: ", list(self.df.columns))
+        print(f"Shape: {self.df.shape}")
+        print(f"\nFirst 5 rows:\n{self.df.head()}")
+        print(f"\nColumn names: {list(self.df.columns)}")
         return self.df
 
     def explore_data(self):
         """Show basic statistics and missing value info."""
-        print("\nMissing Values: ")
+        print("\nMissing Values")
         print(self.df.isnull().sum())
 
-        print("\nData Types: ")
+        print("\nData Types")
         print(self.df.dtypes)
 
-        print("\nBasic Statistics: ")
+        print("\nBasic Statistics")
         print(self.df.describe())
 
     def preprocess(self, target_column):
@@ -58,7 +57,7 @@ class FraudDetector:
 
         # Encode any text/categorical columns
         le = LabelEncoder()
-        for col in df.select_dtypes(include= 'object' ).columns:
+        for col in df.select_dtypes(include='object').columns:
             if col != target_column:
                 df[col] = le.fit_transform(df[col])
 
@@ -66,21 +65,21 @@ class FraudDetector:
         X = df.drop(columns=[target_column])
         y = df[target_column]
 
-        print("\nClass distribution before SMOTE:\n", y.value_counts())
+        print(f"\nClass distribution before SMOTE:\n{y.value_counts()}")
 
         # Apply SMOTE to fix imbalance
         smote = SMOTE(random_state=42)
         X_resampled, y_resampled = smote.fit_resample(X, y)
 
-        print("\nClass distribution after SMOTE:\n", pd.Series(y_resampled).value_counts())
+        print(f"\nClass distribution after SMOTE:\n{pd.Series(y_resampled).value_counts()}")
 
         # Split into train and test
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
             X_resampled, y_resampled, test_size=0.2, random_state=42
         )
 
-        print("\nTraining samples: ", self.X_train.shape[0])
-        print("Testing samples:  ", self.X_test.shape[0])
+        print(f"\nTraining samples: {self.X_train.shape[0]}")
+        print(f"Testing samples:  {self.X_test.shape[0]}")
 
     def train(self):
         """Train Logistic Regression and Random Forest models."""
@@ -99,6 +98,8 @@ class FraudDetector:
 
     def evaluate(self):
         """Print classification report and plot confusion matrix for each model."""
+        import os
+        os.makedirs('plots', exist_ok=True)
 
         for name, model in self.models.items():
             print(f"\n{'='*45}")
@@ -111,15 +112,16 @@ class FraudDetector:
 
             # Confusion matrix plot
             cm = confusion_matrix(self.y_test, y_pred)
-            plt.figure(figsize=(5, 4))
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
-            plt.title("Confusion Matrix — " , name)
-            plt.xlabel('Predicted')
-            plt.ylabel('Actual')
+            fig, ax = plt.subplots(figsize=(5, 4))
+            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax)
+            ax.set_title('Confusion Matrix - ' + name)
+            ax.set_xlabel('Predicted')
+            ax.set_ylabel('Actual')
             plt.tight_layout()
-            plt.savefig(f'plots/confusion_matrix_{name.replace(" ", "_")}.png')
+            filename = name.replace(" ", "_")
+            plt.savefig(f'plots/confusion_matrix_{filename}.png')
             plt.show()
-            print("Confusion matrix saved to plots/")
+            print(f"Confusion matrix saved to plots/")
 
     def plot_feature_importance(self):
         """Plot feature importance from the Random Forest model."""
